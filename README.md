@@ -2,7 +2,7 @@
 
 A dropdown for Herdr that lists the mods you can open, shows which are open now, and opens or closes one with a click.
 
-![Mods](preview.png)
+![The Mods dropdown open under its top bar button in a Herdr window, listing the mods with the open ones marked](preview.png)
 
 A mod for the [Herdr](https://github.com/ogulcancelik/herdr) desktop app. Built for macOS.
 
