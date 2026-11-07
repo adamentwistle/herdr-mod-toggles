@@ -2,7 +2,7 @@
 
 A dropdown under a top bar button that lists every mod the person can open, marks the ones open now, and opens or closes one with a click. `ctrl-shift-o` opens it too.
 
-![Mods](preview.png)
+![The Mods dropdown open under its top bar button in a Herdr window, listing the mods with the open ones marked](preview.png)
 
 ## What you see
 
