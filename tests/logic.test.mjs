@@ -2,47 +2,53 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import * as logic from "../mods/mod-toggles/logic.js";
 
-const keys = {
-  global: { "cmd-p": "mod.open:picker", "ctrl-shift-q": "mod.open:jumpycritter", "ctrl-shift-u": "mod.open:pageme", "ctrl-shift-j": { command: "jumpycritter.jump" } },
-  "mod:jumpycritter": { space: "jumpycritter.jump" },
-  terminal: { "cmd-c": "terminal.copy" },
-};
+const tree = { id: "root", type: "row", children: [
+  { id: "tabs", type: "block", content: { mod: "tabs" } },
+  { id: "panel", type: "column", hidden: false, children: [
+    { id: "panel-body", type: "stack", active: "orchi", children: [
+      { id: "files", type: "block", content: { mod: "files" } },
+      { id: "orchi", type: "block", content: { mod: "orchi" } } ] } ] } ] };
+const keyList = [
+  { section: "global", keys: "cmd-p", action: "mod.open:picker" },
+  { section: "global", keys: "ctrl-shift-q", action: "mod.open:jumpycritter" },
+  { section: "global", keys: "ctrl-shift-y", action: "mod.open:orchi" },
+  { section: "global", keys: "ctrl-shift-o", action: "mod.open:mod-toggles" },
+  { section: "global", keys: "cmd-t", action: "tab.new" },
+];
 
-test("only your own mods are listed, not Herdr's, hidden ones or this one", () => {
-  const installed = { picker: {}, tabs: {} };
-  assert.deepEqual(logic.ownMods(["tabs", "picker", ".off", ".linear.before-link", "mod-toggles", "wrapped", "crawlspace"], installed), ["crawlspace", "wrapped"]);
+test("rows are the layout's panels, then mods a key opens, once each and not this one", () => {
+  const rows = logic.rowsFrom(keyList, tree, { jumpycritter: "Jumpy Critter" });
+  assert.deepEqual(rows.map((r) => [r.kind, r.mod, r.title]), [
+    ["panel", "files", "Files"], ["panel", "orchi", "Orchi"],
+    ["overlay", "picker", "Picker"], ["overlay", "jumpycritter", "Jumpy Critter"]]);
+  assert.equal(rows[3].key, "ctrl-shift-q");
 });
 
-test("off takes out every key that opens or drives the mod, and nothing else", () => {
-  const { keys: next, removed } = logic.stripKeys(keys, "jumpycritter");
-  assert.deepEqual(next.global, { "cmd-p": "mod.open:picker", "ctrl-shift-u": "mod.open:pageme" });
-  assert.equal(next["mod:jumpycritter"], undefined);
-  assert.deepEqual(next.terminal, keys.terminal);
-  assert.equal(removed.global["ctrl-shift-q"], "mod.open:jumpycritter");
-  assert.ok(removed["mod:jumpycritter"]);
+test("a panel is open when it's the stack's choice and nothing above it is hidden", () => {
+  const [files, orchi] = logic.panels(tree);
+  assert.equal(logic.panelOpen(tree, orchi), true);
+  assert.equal(logic.panelOpen(tree, files), false);
+  const hidden = structuredClone(tree); hidden.children[1].hidden = true;
+  assert.equal(logic.panelOpen(hidden, orchi), false);
 });
 
-test("on puts the keys back exactly where they were", () => {
-  const { keys: next, removed } = logic.stripKeys(keys, "jumpycritter");
-  const back = logic.restoreKeys(next, removed);
-  assert.deepEqual(Object.keys(back.global), Object.keys(keys.global));
-  assert.deepEqual(back, keys);
+test("object bindings count too", () => {
+  assert.equal(logic.opens({ command: "mod.open", args: { name: "wrapped" } }), "wrapped");
+  assert.equal(logic.opens("app.quit"), null);
 });
 
-test("a key taken while the mod was off stays with what took it", () => {
-  const { keys: next, removed } = logic.stripKeys(keys, "jumpycritter");
-  next.global["ctrl-shift-q"] = "app.quit";
-  assert.equal(logic.restoreKeys(next, removed).global["ctrl-shift-q"], "app.quit");
+test("shortcuts read the way each platform writes them", () => {
+  assert.equal(logic.keyLabel("ctrl-shift-q", "macos"), "⌃⇧Q");
+  assert.equal(logic.keyLabel("cmd-p", "macos"), "⌘P");
+  assert.equal(logic.keyLabel("ctrl-shift-q", "windows"), "Ctrl+Shift+Q");
+  assert.equal(logic.keyLabel(null, "macos"), "");
 });
 
-test("a mod a layout shows or another mod names is locked, and says by what", () => {
-  const refs = logic.parseRefs("herd\tlayouts/main-linear.json mods/panel-buttons/main.js \nplan-view\tmods/orchi/main.js \njumpycritter\t\n");
-  assert.equal(logic.lockedBy("herd", refs), "main-linear");
-  assert.equal(logic.lockedBy("plan-view", refs), "orchi");
-  assert.equal(logic.lockedBy("jumpycritter", refs), null);
+test("open overlays come from herdr-app status, and a bad reply means none", () => {
+  assert.ok(logic.openOverlays('{"overlays":["wrapped"]}').has("wrapped"));
+  assert.equal(logic.openOverlays("nope").size, 0);
 });
 
-test("keys.json is written back in its own style", () => {
-  assert.equal(logic.asBefore({ a: { b: 1 } }, '{\n  "a": {}\n}'), '{\n  "a": {\n    "b": 1\n  }\n}');
-  assert.ok(logic.asBefore({}, '{\n    "a": 1\n}\n').endsWith("\n"));
+test("the dropdown fits its rows", () => {
+  assert.equal(logic.heightFor(3), 3 * logic.ROW + logic.PAD * 2 + 2);
 });

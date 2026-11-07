@@ -1,18 +1,29 @@
 # Mods
 
-An overlay for Herdr that lists your own mods with a switch on each, to turn one off and back on.
+A dropdown for Herdr that lists the mods you can open, shows which are open now, and opens or closes one with a click.
 
 ![Mods](preview.png)
 
 A mod for the [Herdr](https://github.com/ogulcancelik/herdr) desktop app. Built for macOS.
 
-Ask your agent to add it from [herdr.dev/mods](https://herdr.dev/gallery/?type=mods), or point it at this repo. It reads [the recipe](RECIPE.md) and every file first. By hand, copy `mods/mod-toggles` into `~/.config/herdr-app/mods` and merge `keys.json` into yours. `ctrl-shift-o` opens it. `mods/mod-toggles/icon.svg` is there for a bar button: `run("mod.open", { name: "mod-toggles" })`.
+Ask your agent to add it from [herdr.dev/mods](https://herdr.dev/gallery/?type=mods), or point it at this repo. It reads [the recipe](RECIPE.md) and every file first. By hand, copy `mods/mod-toggles` into `~/.config/herdr-app/mods` and merge `keys.json` into yours. `ctrl-shift-o` opens it.
 
-Herdr has no off switch for a mod, so off moves the mod's folder to `mods/.off/<name>`, where Herdr doesn't load it, and takes its keys out of `keys.json` into `mods/.off/keys.json`. On moves both back, keys in their old places. Nothing is deleted.
+To open it from a bar button as a dropdown under the button:
 
-Herdr's own mods aren't listed. A mod that a layout shows, or that another mod opens, is listed with its switch dimmed and the name of what uses it, and can't be turned off.
+```js
+.on_mouse_down("left", (e, cx) => {
+  cx.stop_propagation();
+  if (shared("mod-toggles.shown") || Date.now() - (Number(shared("mod-toggles.closedAt")) || 0) < 250) return;
+  const b = e.bounds, w = 280;
+  openOverlay({ mod: "mod-toggles", kind: "popup", frame: "none", width: w,
+    height: Number(shared("mod-toggles.height")) || 320,
+    at: b ? { x: Math.max(8, b.x + b.width - w), y: b.y + b.height + 6 } : "pointer" });
+})
+```
 
-It runs `ls`, `mv`, `mkdir`, `grep` and `sh` on this machine, and reads and writes `keys.json`. It makes no network calls.
+`mods/mod-toggles/icon.svg` is there for the button.
+
+It runs `ls` and `herdr-app status` on this machine and makes no network calls.
 
 `node --test` runs the checks.
 
